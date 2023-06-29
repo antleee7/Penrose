@@ -1,0 +1,37 @@
+import matplotlib.pyplot as plt
+import matplotlib.patches as ptc
+from math import ceil
+
+
+c = [1, (5 ** 0.5 - 1) / 4, -(5 ** 0.5 + 1) / 4, -(5 ** 0.5 + 1) / 4, (5 ** 0.5 - 1) / 4]
+s = [0, (10 + 2 * 5 ** 0.5) ** 0.5 / 4, (10 - 2 * 5 ** 0.5) ** 0.5 / 4, - (10 - 2 * 5 ** 0.5) ** 0.5 / 4, - (10 + 2 * 5 ** 0.5) ** 0.5 / 4]
+
+def create_penrose(gamma, n):
+    def K(t, a, b):
+        return ceil(round(a * c[t] + b * s[t] + gamma[t], 5))
+
+    for i in range(4):
+        for j in range(i + 1, 5):
+            for x in range(-n, n + 1):
+                for y in range(-n, n + 1):
+                    x2 = x - gamma[i]
+                    y2 = y - gamma[j]
+                    a, b = (s[i] * y2 - s[j] * x2) / s[(i - j) % 5], (c[j] * x2 - c[i] * y2) / s[(i - j) % 5]
+                    p, q = 0, 0
+                    cnt = 0
+                    for t in range(5):
+                        u = K(t, a, b)
+                        cnt += u
+                        p += u * c[t]
+                        q += u * s[t]
+                    # plt.plot([p, p + c[i], p + c[i] + c[j], p + c[j], p], [q, q + s[i], q + s[i] + s[j], q + s[j], q])
+                    color = "black" if (abs(i - j) == 1 or abs(i - j) == 4) else "blue"
+                    plt.gca().add_patch(ptc.Polygon([[p, q], [p + c[i], q + s[i]], [p + c[i] + c[j], q + s[i] + s[j]], [p + c[j], q + s[j]]], color=color, ec="white"))
+                    
+    plt.axis("square")
+    plt.xlim(-15, 15)
+    plt.ylim(-15, 15)
+    plt.show()
+
+
+create_penrose([0.1, 0.2, 0.3, 0.4, -1], 5)
