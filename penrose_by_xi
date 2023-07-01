@@ -1,0 +1,77 @@
+# xi를 이용하여 gamma를 계산한 후, 이전 코드에서 만들었던 gamma를 통해 penrose tiling을 그리는 함수를 이용하였습니다.
+# gamma를 계산할 때 에타를 임의로 0으로 두었는데, 이는 xi 값이 같은 타일링은 모두 평행이동을 통해 겹쳐질 수 있다는 내용을 기반으로 하고 있습니다. 하지만 이렇게 계산하는 것이 옳은지는 확신하지 못하겠습니다.
+# 프로그램을 실행시키면 왼쪽에 좌표평면이 생성되는데, 좌표평면을 클릭하면 해당 위치의 점을 크시값으로 하는 펜로즈 타일링이 오른쪽에 생성됩니다.
+# 파이썬의 부동소수점 연산 때문에 singular한 pentagrid가 생성되는 경우는 무시할 수 있을 것 같습니다.
+# 현재 프로그램의 가장 큰 문제점은 연산속도가 너무 느리다는 것입니다.
+
+
+import matplotlib.pyplot as plt
+import matplotlib.patches as ptc
+from math import ceil
+
+
+c = [1.0, (5 ** 0.5 - 1) / 4, -(5 ** 0.5 + 1) / 4, -(5 ** 0.5 + 1) / 4, (5 ** 0.5 - 1) / 4]
+s = [0.0, (10 + 2 * 5 ** 0.5) ** 0.5 / 4, (10 - 2 * 5 ** 0.5) ** 0.5 / 4, - (10 - 2 * 5 ** 0.5) ** 0.5 / 4, - (10 + 2 * 5 ** 0.5) ** 0.5 / 4]
+
+m, M = -10, 10
+
+def create_penrose(gamma, n):
+    def K(t, a, b):
+        return ceil(round(a * c[t] + b * s[t] + gamma[t], 10))
+    
+    def is_in_range(points):
+        for point in points:
+            x, y = point[0], point[1]
+            if m <= x <= M or m <= y <= M:
+                return True
+        else:
+            return False
+
+    for i in range(4):
+        for j in range(i + 1, 5):
+            for x in range(-n, n + 1):
+                for y in range(-n, n + 1):
+                    x2 = x - gamma[i]
+                    y2 = y - gamma[j]
+                    a, b = (s[i] * y2 - s[j] * x2) / s[(i - j) % 5], (c[j] * x2 - c[i] * y2) / s[(i - j) % 5]
+                    p, q = 0, 0
+                    cnt = 0
+                    for t in range(5):
+                        u = K(t, a, b)
+                        cnt += u
+                        p += u * c[t]
+                        q += u * s[t]
+                    # plt.plot([p, p + c[i], p + c[i] + c[j], p + c[j], p], [q, q + s[i], q + s[i] + s[j], q + s[j], q])
+                    color = "black" if (abs(i - j) == 1 or abs(i - j) == 4) else "grey"
+                    points = [[p, q], [p + c[i], q + s[i]], [p + c[i] + c[j], q + s[i] + s[j]], [p + c[j], q + s[j]]]
+                    if is_in_range(points):
+                        plt.gca().add_patch(ptc.Polygon(points, color=color, ec="white"))
+
+
+def calc_gamma(re, im):
+    return [2 * (re * c[(2 * j) % 5] + im * s[(2 * j) % 5]) / 5 for j in range(5)]
+
+
+def get_point(event):
+    if event.inaxes == ax[0] and event.button == 1:
+        x, y = event.xdata, event.ydata
+        point.set_xdata([x])
+        point.set_ydata([y])
+        for patch in ax[1].patches:
+            patch.remove()
+        create_penrose(calc_gamma(x, y), 6)
+        plt.show()
+
+
+
+fig, ax = plt.subplots(1, 2)
+ax[0].set_aspect('equal', adjustable='box')
+ax[0].set(xlim=(-1, 1), ylim=(-1, 1))
+ax[1].set_aspect('equal', adjustable='box')
+ax[1].set(xlim=(-10, 10), ylim=(-10, 10))
+point, = ax[0].plot([0.5], [0], "ko")
+plt.connect("button_press_event", get_point)
+
+create_penrose(calc_gamma(0.5, 0), 6)
+
+plt.show()
