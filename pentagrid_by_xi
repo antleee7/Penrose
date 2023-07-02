@@ -1,0 +1,52 @@
+# Generates a pentagrid by hovering mouse over xi value
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+c = [1.0, (5 ** 0.5 - 1) / 4, -(5 ** 0.5 + 1) / 4, -(5 ** 0.5 + 1) / 4, (5 ** 0.5 - 1) / 4]
+s = [0.0, (10 + 2 * 5 ** 0.5) ** 0.5 / 4, (10 - 2 * 5 ** 0.5) ** 0.5 / 4, - (10 - 2 * 5 ** 0.5) ** 0.5 / 4, - (10 + 2 * 5 ** 0.5) ** 0.5 / 4]
+
+def get_point(event):
+    if event.inaxes == ax[0]:
+
+        x, y = event.xdata, event.ydata
+
+        point.set_xdata([x])
+        point.set_ydata([y])
+
+
+        for line in ax[1].lines:
+            line.remove()
+
+        create_pentagrid(calc_gamma(x,y), 15)
+        plt.draw_all()
+
+def calc_gamma(re, im):
+    return [2 * (re * c[(2 * j) % 5] + im * s[(2 * j) % 5]) / 5 for j in range(5)]
+
+def create_pentagrid(gamma, n):
+    for j in range(0,5):
+        for z in np.arange(-n,n):
+            x = z + gamma[j]
+            plt.axline((x * c[j], x * s[j]), (x * c[j] - s[j], x * s[j] + c[j]), color = "black")
+
+
+fig, ax = plt.subplots(1, 2)
+
+
+m, M = -10, 10
+
+ax[0].set_aspect('equal', adjustable='box')
+ax[0].set(xlim=(-1, 1), ylim=(-1, 1))
+
+
+ax[1].set_aspect('equal', adjustable='box')
+ax[1].set(xlim=(m, M), ylim=(m, M))
+point, = ax[0].plot([0.5], [0], "ko")
+plt.connect("motion_notify_event", get_point)
+
+
+create_pentagrid(calc_gamma(0,0),15)
+
+plt.show()
