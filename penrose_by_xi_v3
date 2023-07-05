@@ -1,0 +1,102 @@
+import matplotlib.pyplot as plt
+import matplotlib.patches as ptc
+from matplotlib.collections import PatchCollection
+from math import ceil
+from time import perf_counter
+
+
+c = [1.0, (5 ** 0.5 - 1) / 4, -(5 ** 0.5 + 1) / 4, -(5 ** 0.5 + 1) / 4, (5 ** 0.5 - 1) / 4]
+s = [0.0, (10 + 2 * 5 ** 0.5) ** 0.5 / 4, (10 - 2 * 5 ** 0.5) ** 0.5 / 4, - (10 - 2 * 5 ** 0.5) ** 0.5 / 4, - (10 + 2 * 5 ** 0.5) ** 0.5 / 4]
+
+
+memo = dict()
+def calc_point(vec):
+    vec = tuple(vec)
+    if vec in memo:
+        return memo[vec]
+    
+    p, q = 0, 0
+    for t, u in enumerate(vec):
+        p += u * c[t + 1]
+        q += u * s[t + 1]
+    ans = [p, q]
+    memo[vec] = ans
+    return ans
+
+
+def modify(vec, i):
+    return [vec[j] + (-1 if i == 0 else (1 if j == i - 1 else 0)) for j in range(4)]
+
+
+def create_penrose(gamma, n):
+    t1 = perf_counter()
+    fat = []
+    slim = []
+    def K(t, a, b):
+        return ceil(round(a * c[t] + b * s[t] + gamma[t], 10))
+    
+    def is_in_range(points):
+        for point in points:
+            x, y = point[0], point[1]
+            if m <= x <= M or m <= y <= M:
+                return True
+        else:
+            return False
+
+    for i in range(4):
+        for j in range(i + 1, 5):
+            si, sj = s[i] / s[(i - j) % 5], s[j] / s[(i - j) % 5]
+            ci, cj = c[i] / s[(i - j) % 5], c[j] / s[(i - j) % 5]
+            for x in range(-n, n + 1):
+                for y in range(-n, n + 1):
+                    x2 = x - gamma[i]
+                    y2 = y - gamma[j]
+                    a, b = si * y2 - sj * x2, cj * x2 - ci * y2
+                    ref = K(0, a, b)
+                    vec1 = [K(t, a, b) - ref for t in range(1, 5)]
+                    vec2 = modify(vec1, i)
+                    vec3 = modify(vec2, j)
+                    vec4 = modify(vec1, j)
+                    points = [calc_point(vec1), calc_point(vec2), calc_point(vec3), calc_point(vec4)]
+                    if is_in_range(points):
+                        if (abs(i - j) == 1 or abs(i - j) == 4):
+                            fat.append(ptc.Polygon(points))
+                        else:
+                            slim.append(ptc.Polygon(points))
+    t2 = perf_counter()
+
+    t3 = perf_counter()
+    ax[1].add_collection(PatchCollection(fat, edgecolor="white", facecolor="black"))
+    ax[1].add_collection(PatchCollection(slim, edgecolor="white", facecolor="grey"))
+    plt.draw_all()
+    t4 = perf_counter()
+    print(t2 - t1, t4 - t3)
+
+
+def calc_gamma(re, im):
+    return [2 * (re * c[(2 * j) % 5] + im * s[(2 * j) % 5]) / 5 for j in range(5)]
+
+
+def get_point(event):
+    if event.inaxes == ax[0] and event.button == 1:
+        x, y = event.xdata, event.ydata
+        point.set_xdata([x])
+        point.set_ydata([y])
+        for c in ax[1].collections:
+            c.remove()
+        create_penrose(calc_gamma(x, y), n_line)
+
+
+n_line = 6
+m, M = -10, 10
+fig, ax = plt.subplots(1, 2)
+ax[0].set_aspect('equal', adjustable='box')
+ax[0].set(xlim=(-1, 1), ylim=(-1, 1))
+ax[1].set_aspect('equal', adjustable='box')
+ax[1].set(xlim=(m, M), ylim=(m, M))
+point, = ax[0].plot([0.5], [0], "ko")
+plt.connect("button_press_event", get_point)
+
+create_penrose(calc_gamma(0.5, 0), n_line)
+
+plt.show()
